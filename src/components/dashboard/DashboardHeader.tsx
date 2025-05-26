@@ -19,7 +19,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ avatarSrc }) =
       <div className="flex items-center gap-2">
         <div className="text-[6px] text-gray-500">GRC Dashboard</div>
         <div className="h-4 w-4 rounded-full overflow-hidden bg-gray-200">
-          <img src={avatarSrc} alt="User" className="object-cover w-full h-full" />
+          <img src={avatarSrc} alt="User avatar" className="object-cover w-full h-full" />
         </div>
       </div>
     </div>

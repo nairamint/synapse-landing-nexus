@@ -10,9 +10,43 @@ interface SeoHeadProps {
   ogType?: string;
   keywords?: string[];
   structuredData?: {
-    organization?: Record<string, any>;
-    application?: Record<string, any>;
-    [key: string]: Record<string, any> | undefined;
+    organization?: OrganizationData;
+    application?: ApplicationData;
+    // You can add other specific types here if needed
+    [key: string]: BaseStructuredData | undefined; // Fallback for other types
+  };
+}
+
+interface BaseStructuredData {
+  "@context": string;
+  "@type": string;
+  name?: string; // Make optional if sometimes not present
+  description?: string; // Make optional
+  url?: string; // Make optional
+  [key: string]: any; // Allow other properties for flexibility initially
+}
+
+interface OrganizationData extends BaseStructuredData {
+  logo?: string;
+  address?: {
+    "@type": string;
+    streetAddress?: string;
+    addressLocality?: string;
+    postalCode?: string;
+    addressCountry?: string;
+  };
+  email?: string;
+  sameAs?: string[];
+}
+
+interface ApplicationData extends BaseStructuredData {
+  applicationCategory?: string;
+  operatingSystem?: string;
+  offers?: {
+    "@type": string;
+    price?: string;
+    priceCurrency?: string;
+    availability?: string;
   };
 }
 

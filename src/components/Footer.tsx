@@ -50,7 +50,6 @@ const Footer = () => {
                 <li><Link to="/resources/blog" className="text-gray-600 hover:text-synapse-primary">Blog</Link></li>
                 <li><Link to="/resources/documentation" className="text-gray-600 hover:text-synapse-primary">Documentation</Link></li>
                 <li><Link to="/resources/faq" className="text-gray-600 hover:text-synapse-primary">FAQ</Link></li>
-                <li><Link to="/resources/webinars" className="text-gray-600 hover:text-synapse-primary">Webinars</Link></li>
               </ul>
             </div>
             

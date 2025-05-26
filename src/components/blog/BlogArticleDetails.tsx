@@ -71,7 +71,7 @@ const BlogArticleDetails: React.FC = () => {
       // Stop any ongoing speech
       window.speechSynthesis.cancel();
     };
-  }, [article.id]);
+  }, [article.id, article.content, audio, volume]);
   
   // Toggle play/pause audio narration
   const toggleAudio = () => {
@@ -90,7 +90,7 @@ const BlogArticleDetails: React.FC = () => {
         .replace(/#{1,6} /g, '') // Remove Markdown headings
         .replace(/\*\*/g, ''); // Remove bold markers
       
-      let utterance = new SpeechSynthesisUtterance(cleanText);
+      const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.rate = 1;
       utterance.pitch = 1;
       utterance.volume = volume;

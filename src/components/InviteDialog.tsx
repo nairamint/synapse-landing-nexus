@@ -63,11 +63,17 @@ const InviteDialog: React.FC<InviteDialogProps> = ({ open, onOpenChange }) => {
       
       form.reset();
       onOpenChange(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending invitation:', error);
+      let errorMessage = "Something went wrong. Please try again later.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
       toast({
         title: "Failed to send invitation",
-        description: error?.message || "Something went wrong. Please try again later.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

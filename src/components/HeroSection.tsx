@@ -75,7 +75,7 @@ const HeroSection = () => {
                 <DashboardContent onAmlDialogOpen={handleAmlDialogOpen} />
                 
                 {/* Mobile-specific charts for responsive design */}
-                <div className="hidden md:hidden">
+                <div className="md:hidden">
                   <MobileCharts />
                 </div>
               </div>

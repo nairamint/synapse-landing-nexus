@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -27,13 +27,6 @@ const Login = () => {
   const navigate = useNavigate();
   const { login, loginWithGoogle, loginWithLinkedIn, isAuthenticated } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Redirect if already logged in
-  if (isAuthenticated) {
-    navigate("/dashboard");
-    return null;
-  }
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -41,6 +34,12 @@ const Login = () => {
       password: "",
     },
   });
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
@@ -53,6 +52,10 @@ const Login = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (isAuthenticated) {
+    return null; // Or a loading indicator
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -143,7 +146,7 @@ const Login = () => {
 
             <div className="flex items-center justify-between">
               <div className="text-sm">
-                <Link to="#" className="font-medium text-blue-600 hover:text-blue-500">
+                <Link to="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
                   Forgot your password?
                 </Link>
               </div>

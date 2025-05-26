@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -36,13 +36,6 @@ const Register = () => {
   const navigate = useNavigate();
   const { register, loginWithGoogle, loginWithLinkedIn, isAuthenticated } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Redirect if already logged in
-  if (isAuthenticated) {
-    navigate("/dashboard");
-    return null;
-  }
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -53,6 +46,12 @@ const Register = () => {
       acceptTerms: false,
     },
   });
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
@@ -65,6 +64,10 @@ const Register = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (isAuthenticated) {
+    return null; // Or a loading indicator
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -200,7 +203,7 @@ const Register = () => {
                   </FormControl>
                   <div className="space-y-1 leading-none">
                     <FormLabel className="text-sm">
-                      I accept the <Link to="#" className="text-blue-600 hover:text-blue-500">Terms of Service</Link> and <Link to="#" className="text-blue-600 hover:text-blue-500">Privacy Policy</Link>
+                      I accept the <Link to="/legal/terms" className="text-blue-600 hover:text-blue-500">Terms of Service</Link> and <Link to="/legal/privacy" className="text-blue-600 hover:text-blue-500">Privacy Policy</Link>
                     </FormLabel>
                     <FormMessage />
                   </div>

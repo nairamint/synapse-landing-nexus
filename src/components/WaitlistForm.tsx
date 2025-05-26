@@ -61,12 +61,17 @@ const WaitlistForm = () => {
       setMissingCapability("");
       setLimitingTools("");
       setEngagement("");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error submitting to waitlist:", error);
-      
+      let errorMessage = "We couldn't add you to the waitlist. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
       toast({
         title: "Something went wrong",
-        description: "We couldn't add you to the waitlist. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
