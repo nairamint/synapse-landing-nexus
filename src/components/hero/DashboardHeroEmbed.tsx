@@ -78,6 +78,10 @@ export const DashboardHeroEmbed: React.FC<DashboardHeroEmbedProps> = memo(({
   onClick 
 }) => {
   const navigate = useNavigate();
+<<<<<<< Updated upstream
+=======
+  const [imageError, setImageError] = useState(false);
+>>>>>>> Stashed changes
   const [isVisible, setIsVisible] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
