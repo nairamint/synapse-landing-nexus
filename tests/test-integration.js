@@ -25,11 +25,7 @@ const TEST_SFDR_REQUEST = {
     sustainabilityCharacteristics: ['Climate change mitigation', 'Social inclusion']
   },
   paiIndicators: {
-    mandatoryIndicators: [
-      'Greenhouse gas emissions',
-      'Carbon footprint',
-      'Biodiversity impact'
-    ],
+    mandatoryIndicators: ['Greenhouse gas emissions', 'Carbon footprint', 'Biodiversity impact'],
     dataQuality: {
       coveragePercentage: 85,
       estimationMethods: ['Direct measurement'],
@@ -41,7 +37,7 @@ const TEST_SFDR_REQUEST = {
 // Test functions
 async function testSupabaseConnection() {
   console.log('🔍 Testing Supabase connection...');
-  
+
   try {
     const response = await fetch(`${TEST_CONFIG.baseUrl}/api/health`);
     if (response.ok) {
@@ -59,7 +55,7 @@ async function testSupabaseConnection() {
 
 async function testSFDRValidation() {
   console.log('🔍 Testing SFDR validation...');
-  
+
   try {
     // This would test our actual validation endpoint
     // For now, we'll simulate the test
@@ -73,7 +69,7 @@ async function testSFDRValidation() {
 
 async function testOCRProcessing() {
   console.log('🔍 Testing OCR processing...');
-  
+
   try {
     // Test OCR API connection
     const ocrTestUrl = 'https://api.ocr.space/parse/image';
@@ -82,10 +78,10 @@ async function testOCRProcessing() {
       url: 'https://example.com/test-image.jpg',
       language: 'eng'
     });
-    
+
     const response = await fetch(`${ocrTestUrl}?${params}`);
     const result = await response.json();
-    
+
     if (result.IsErroredOnProcessing) {
       console.log('⚠️ OCR API test failed (expected with demo key)');
       return true; // This is expected with demo key
@@ -101,26 +97,26 @@ async function testOCRProcessing() {
 
 async function testWebSocketConnection() {
   console.log('🔍 Testing WebSocket connection...');
-  
+
   try {
     // Test WebSocket connection
     const wsUrl = 'wss://hnwwykttyzfvflmcswjk.supabase.co/functions/v1/websocket-server';
     const ws = new WebSocket(wsUrl);
-    
-    return new Promise((resolve) => {
+
+    return new Promise(resolve => {
       const timeout = setTimeout(() => {
         console.log('⚠️ WebSocket connection timeout (may be expected)');
         resolve(true);
       }, 5000);
-      
+
       ws.onopen = () => {
         clearTimeout(timeout);
         console.log('✅ WebSocket connection successful');
         ws.close();
         resolve(true);
       };
-      
-      ws.onerror = (error) => {
+
+      ws.onerror = error => {
         clearTimeout(timeout);
         console.log('⚠️ WebSocket connection error (may be expected):', error);
         resolve(true); // This might be expected if function not deployed
@@ -134,11 +130,11 @@ async function testWebSocketConnection() {
 
 async function testESMAIntegration() {
   console.log('🔍 Testing ESMA integration...');
-  
+
   try {
     const esmaUrl = 'https://registers.esma.europa.eu/solr/esma_registers/sfdr_disclosures';
     const response = await fetch(esmaUrl);
-    
+
     if (response.ok) {
       console.log('✅ ESMA API connection successful');
       return true;
@@ -155,7 +151,7 @@ async function testESMAIntegration() {
 // Main test runner
 async function runIntegrationTests() {
   console.log('🚀 Starting SFDR Navigator Integration Tests...\n');
-  
+
   const tests = [
     { name: 'Supabase Connection', fn: testSupabaseConnection },
     { name: 'SFDR Validation', fn: testSFDRValidation },
@@ -163,42 +159,41 @@ async function runIntegrationTests() {
     { name: 'WebSocket Connection', fn: testWebSocketConnection },
     { name: 'ESMA Integration', fn: testESMAIntegration }
   ];
-  
+
   const results = [];
-  
+
   for (const test of tests) {
     console.log(`\n📋 Running: ${test.name}`);
     const startTime = Date.now();
-    
+
     try {
       const result = await Promise.race([
         test.fn(),
-        new Promise((_, reject) => 
+        new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Timeout')), TEST_CONFIG.timeout)
         )
       ]);
-      
+
       const duration = Date.now() - startTime;
       results.push({ name: test.name, success: result, duration });
-      
     } catch (error) {
       const duration = Date.now() - startTime;
       results.push({ name: test.name, success: false, duration, error: error.message });
     }
   }
-  
+
   // Test summary
   console.log('\n📊 Test Results Summary:');
   console.log('========================');
-  
+
   let passed = 0;
   let failed = 0;
-  
+
   results.forEach(result => {
     const status = result.success ? '✅ PASS' : '❌ FAIL';
     const duration = `${result.duration}ms`;
     console.log(`${status} ${result.name} (${duration})`);
-    
+
     if (result.success) {
       passed++;
     } else {
@@ -208,18 +203,18 @@ async function runIntegrationTests() {
       }
     }
   });
-  
+
   console.log('\n📈 Summary:');
   console.log(`✅ Passed: ${passed}`);
   console.log(`❌ Failed: ${failed}`);
   console.log(`📊 Total: ${results.length}`);
-  
+
   if (failed === 0) {
     console.log('\n🎉 All tests passed! Integration is working correctly.');
   } else {
     console.log('\n⚠️ Some tests failed. Check the errors above.');
   }
-  
+
   return { passed, failed, total: results.length };
 }
 
@@ -230,7 +225,9 @@ if (typeof window === 'undefined') {
 } else {
   // Browser environment
   window.runIntegrationTests = runIntegrationTests;
-  console.log('🧪 Integration test script loaded. Run window.runIntegrationTests() to start testing.');
+  console.log(
+    '🧪 Integration test script loaded. Run window.runIntegrationTests() to start testing.'
+  );
 }
 
 module.exports = { runIntegrationTests };
