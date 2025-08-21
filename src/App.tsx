@@ -18,6 +18,7 @@ import UseCases from './pages/UseCases';
 import NexusAgent from './pages/NexusAgent';
 import AgentsPage from './pages/AgentsPage';
 import CDDAgentPage from './pages/CDDAgentPage';
+import TestIntegration from './pages/TestIntegration';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Legal pages
@@ -126,6 +127,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path='/test-integration' element={<TestIntegration />} />
 
             {/* Legal Routes */}
             <Route path='/legal/privacy' element={<PrivacyPolicy />} />
