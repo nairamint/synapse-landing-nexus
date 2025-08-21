@@ -30,6 +30,7 @@ const NexusAgent = () => {
   const [systemStatus, setSystemStatus] = useState<'online' | 'offline' | 'checking'>('checking');
   const [initError, setInitError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [apiConnectionStatus, setApiConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
   const [complianceData, setComplianceData] = useState<{
     status: 'pre-validated' | 'needs-review';
     esmaReference: string;
@@ -46,6 +47,7 @@ const NexusAgent = () => {
      const initializeApp = async () => {
        setInitError(null);
        setSystemStatus('checking');
+       setApiConnectionStatus('checking');
        
        try {
          // Authentication setup
@@ -54,6 +56,23 @@ const NexusAgent = () => {
              logger.info('Auth state changed:', session?.user?.id);
            });
            authListener = data;
+         }
+
+         // Check API connection status
+         if (mounted) {
+           try {
+             const capabilities = await nexusAgent.getCapabilities();
+             if (capabilities && capabilities.version) {
+               setApiConnectionStatus('connected');
+               logger.info('Nexus API connection established');
+             } else {
+               setApiConnectionStatus('disconnected');
+               logger.warn('Nexus API connection failed, using mock mode');
+             }
+           } catch (error) {
+             setApiConnectionStatus('disconnected');
+             logger.warn('Nexus API connection failed, using mock mode:', error);
+           }
          }
 
          // Analytics initialization (non-blocking)
@@ -83,6 +102,7 @@ const NexusAgent = () => {
          if (mounted) {
            setInitError(error instanceof Error ? error.message : 'Initialization failed');
            setSystemStatus('offline');
+           setApiConnectionStatus('disconnected');
          }
        } finally {
          if (mounted) {
@@ -310,6 +330,23 @@ const NexusAgent = () => {
               <Badge variant='outline' className='text-green-600 border-green-200'>
                 <CheckCircle className='w-3 h-3 mr-1' />
                 {complianceData.status === 'pre-validated' ? 'Pre-Validated' : 'Needs Review'}
+              </Badge>
+              <Badge 
+                variant='outline' 
+                className={cn(
+                  'flex items-center space-x-1',
+                  apiConnectionStatus === 'connected' && 'text-blue-600 border-blue-200',
+                  apiConnectionStatus === 'disconnected' && 'text-amber-600 border-amber-200',
+                  apiConnectionStatus === 'checking' && 'text-gray-600 border-gray-200'
+                )}
+              >
+                {apiConnectionStatus === 'connected' && <Wifi className='w-3 h-3' />}
+                {apiConnectionStatus === 'disconnected' && <WifiOff className='w-3 h-3' />}
+                {apiConnectionStatus === 'checking' && <Loader2 className='w-3 h-3 animate-spin' />}
+                <span className='capitalize'>
+                  {apiConnectionStatus === 'connected' ? 'Live API' : 
+                   apiConnectionStatus === 'disconnected' ? 'Mock Mode' : 'Checking...'}
+                </span>
               </Badge>
               <span className='text-sm text-gray-500'>ESMA {complianceData.esmaReference}</span>
             </div>
