@@ -18,7 +18,8 @@ import { ProcessingStages } from '@/components/ui/processing-stages';
 import { Loader2, AlertCircle, Shield, Settings } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { nexusAgent } from '@/services/nexusAgent';
-import { type SFDRClassificationRequest, type NexusValidationResponse, type NexusMessage } from '@/types/nexus';
+import { sfdrApiService } from '@/services/sfdrApiService';
+import { type SFDRClassificationRequest, type NexusValidationResponse, type NexusMessage, type ProcessingStatus } from '@/types/nexus';
 
 // Extended NexusMessage interface to include additional chat features
 interface ChatMessage extends NexusMessage {
@@ -61,6 +62,8 @@ export const NexusAgentChat = forwardRef<any, NexusAgentChatProps>(({
     status: 'pending' | 'active' | 'completed';
     description?: string;
   }>>([]);
+  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
+  const [websocketStatus, setWebsocketStatus] = useState<'connected' | 'disconnected' | 'connecting'>('disconnected');
   const [agentPersonality, _setAgentPersonality] = useState({
     name: 'Sophia',
     role: 'SFDR Navigator & Sustainable Finance Expert',
@@ -100,6 +103,39 @@ export const NexusAgentChat = forwardRef<any, NexusAgentChatProps>(({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // WebSocket integration for real-time updates
+  useEffect(() => {
+    // Subscribe to real-time updates
+    sfdrApiService.subscribeToUpdates('document_processed', (data) => {
+      const messageId = addMessage({
+        type: 'system',
+        content: `Document processed successfully! Extracted fund name: ${data.extractedData?.fundName || 'Unknown'}`,
+        messageType: 'text'
+      });
+      updateMessage(messageId, { isLoading: false });
+    });
+
+    sfdrApiService.subscribeToUpdates('compliance_validated', (data) => {
+      const messageId = addMessage({
+        type: 'system',
+        content: `Compliance validation completed! Score: ${data.score || 0}%`,
+        messageType: 'text'
+      });
+      updateMessage(messageId, { isLoading: false });
+    });
+
+    sfdrApiService.subscribeToUpdates('processing_status', (data) => {
+      setProcessingStatus(data);
+    });
+
+    // Cleanup subscriptions
+    return () => {
+      sfdrApiService.unsubscribeFromUpdates('document_processed');
+      sfdrApiService.unsubscribeFromUpdates('compliance_validated');
+      sfdrApiService.unsubscribeFromUpdates('processing_status');
+    };
+  }, []);
 
   // Listen for quick action events from parent
   useEffect(() => {
@@ -339,17 +375,155 @@ export const NexusAgentChat = forwardRef<any, NexusAgentChatProps>(({
   };
 
   /**
-   * Handle document upload guidance
+   * Handle document upload with OCR processing
    */
-  const handleDocumentUpload = async (_message: string): Promise<string> => {
-    return `Excellent choice. Document upload is a fundamental step in our compliance validation process. Based on my extensive experience in regulatory advisory services, proper documentation significantly streamlines the compliance review cycle. I can assist with analyzing your pre-contractual disclosures, periodic reports, or any SFDR-related documentation. Which specific document type are you planning to upload, and what particular aspects would you like me to focus on during the review?`;
+  const handleDocumentUpload = async (userMessage: string): Promise<string> => {
+    // Check if user has uploaded a file
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput?.files?.length) {
+      const file = fileInput.files[0];
+      
+      try {
+        setProcessingStatus({
+          stage: 'uploading',
+          progress: 0,
+          message: 'Uploading document...'
+        });
+
+        const result = await sfdrApiService.uploadDocumentWithOCR(file, 'compliance_document', {
+          enableOCR: true,
+          language: 'eng',
+          extractTables: true
+        });
+
+        if (result.success) {
+          const extractedData = result.extractedData;
+          return `Document uploaded and processed successfully! 
+
+📄 **Extracted Information:**
+• Fund Name: ${extractedData?.fundName || 'Not detected'}
+• Article Classification: ${extractedData?.articleClassification || 'Not detected'}
+• Investment Objective: ${extractedData?.investmentObjective || 'Not specified'}
+• Taxonomy Alignment: ${extractedData?.taxonomyAlignment || 0}%
+
+${result.ocrResult?.success ? `📝 **OCR Results:**
+• Text extracted: ${result.ocrResult.text?.length || 0} characters
+• Confidence: ${result.ocrResult.confidence || 0}%
+• Processing time: ${result.ocrResult.processingTime || 0}ms` : ''}
+
+Would you like me to validate the compliance of this fund against SFDR requirements?`;
+        } else {
+          return `❌ Document upload failed: ${result.error || 'Unknown error'}
+
+Please try again or contact support if the issue persists.`;
+        }
+      } catch (error) {
+        logger.error('Document upload error:', error);
+        return `❌ Error processing document: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      } finally {
+        setProcessingStatus(null);
+      }
+    }
+
+    return `I can help you upload and analyze compliance documents with OCR processing. 
+
+📁 **Supported file types:** PDF, DOC, DOCX, TXT, JPEG, PNG, TIFF
+🔍 **OCR Features:** Text extraction, table detection, SFDR data extraction
+
+Please use the document upload feature in the interface, or provide the document details you'd like me to analyze.
+
+For SFDR compliance documents, I can help you with:
+• Fund prospectus analysis
+• PAI indicator validation  
+• Taxonomy alignment verification
+• Compliance report generation
+
+What type of document would you like to upload?`;
   };
 
   /**
-   * Handle compliance check with real SFDR logic
+   * Handle compliance check with real SFDR validation
    */
-  const handleComplianceCheck = async (_message: string): Promise<string> => {
-    return `Absolutely. Conducting a comprehensive compliance assessment is essential for robust regulatory positioning. I will systematically verify your fund against the full spectrum of SFDR criteria, including disclosure requirements, PAI considerations, and classification alignment. To provide the most targeted analysis, could you share details about your fund type, current classification status, or any specific compliance areas where you have concerns?`;
+  const handleComplianceCheck = async (userMessage: string): Promise<string> => {
+    try {
+      // Create a sample SFDR classification request
+      const request: SFDRClassificationRequest = {
+        metadata: {
+          entityId: 'DEMO-ENTITY-001',
+          reportingPeriod: new Date().getFullYear().toString(),
+          regulatoryVersion: 'SFDR_v1.0',
+          submissionType: 'INITIAL'
+        },
+        fundProfile: {
+          fundType: 'UCITS',
+          fundName: 'Demo Sustainable Fund',
+          targetArticleClassification: 'Article8',
+          investmentObjective: 'Promoting environmental and social characteristics',
+          sustainabilityCharacteristics: ['Climate change mitigation', 'Social inclusion']
+        },
+        paiIndicators: {
+          mandatoryIndicators: [
+            'Greenhouse gas emissions',
+            'Carbon footprint',
+            'Biodiversity impact',
+            'Water consumption',
+            'Waste management'
+          ],
+          dataQuality: {
+            coveragePercentage: 85,
+            estimationMethods: ['Direct measurement', 'Proxy data'],
+            dataLag: 3
+          }
+        },
+        taxonomyAlignment: {
+          environmentalObjectives: ['climate_change_mitigation', 'climate_change_adaptation'],
+          alignmentPercentage: 75,
+          eligibilityPercentage: 80,
+          minSafeguards: true
+        }
+      };
+
+      setProcessingStatus({
+        stage: 'validation',
+        progress: 50,
+        message: 'Validating SFDR compliance...'
+      });
+
+      const response = await sfdrApiService.validateSFDRCompliance(request);
+
+      if (response.success) {
+        const results = response.complianceResults;
+        return `✅ **SFDR Compliance Validation Complete**
+
+📊 **Overall Score:** ${results?.overallScore || 0}%
+
+🔍 **Validation Results:**
+${results?.checks?.map(check => 
+  `${check.passed ? '✅' : '❌'} **${check.category}:** ${check.message}`
+).join('\n') || 'No checks performed'}
+
+⚠️ **Issues Found:**
+${results?.issues?.map(issue => 
+  `• ${issue.message} (${issue.severity})`
+).join('\n') || 'No issues found'}
+
+💡 **Recommendations:**
+${results?.recommendations?.map(rec => 
+  `• ${rec}`
+).join('\n') || 'No recommendations'}
+
+Would you like me to generate a detailed compliance report or help you address any specific issues?`;
+      } else {
+        return `❌ Compliance validation failed: ${response.error || 'Unknown error'}
+
+Please try again or contact support if the issue persists.`;
+      }
+    } catch (error) {
+      logger.error('Compliance check error:', error);
+      return `❌ Error during compliance validation: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    } finally {
+      setProcessingStatus(null);
+    }
   };
 
   /**
