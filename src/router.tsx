@@ -29,6 +29,7 @@ import UseCases from './pages/UseCases';
 import NexusAgent from './pages/NexusAgent';
 import SFDRGem from './pages/SFDRGem';
 import Testing from './pages/Testing';
+import SimpleTest from './pages/SimpleTest';
 
 // Create and export the router
 export const router = createBrowserRouter([
@@ -186,6 +187,10 @@ export const router = createBrowserRouter([
   {
     path: '/testing',
     element: <Testing />
+  },
+  {
+    path: '/simple-test',
+    element: <SimpleTest />
   },
   // SFDR Navigator routes - both routes point to the same component
   {
