@@ -314,22 +314,47 @@ export const NexusAgentChat = forwardRef<any, NexusAgentChatProps>(({
     setIsLoading(true);
     setIsTyping(true);
     const isComplexQuery = userMessage.length > 100;
+    
     try {
       if (isComplexQuery) {
         await simulateProcessingStages();
       } else {
         setProcessingType('thinking');
       }
+      
       const response = await routeMessageToHandler(sanitizedMessage);
+      
+      // Update the loading message with the response
       updateMessage(loadingId, {
         content: response,
         isLoading: false
       });
+      
+      // Log successful interaction
+      logger.info('Chat message processed successfully', {
+        messageLength: userMessage.length,
+        isComplexQuery,
+        responseLength: response.length
+      });
+      
     } catch (error) {
       logger.error('Error processing message:', error);
+      
+      // Provide user-friendly error message
+      const errorMessage = error instanceof Error 
+        ? `I encountered an issue: ${error.message}` 
+        : 'Sorry, I encountered an error processing your request. Please try again.';
+      
       updateMessage(loadingId, {
-        content: 'Sorry, I encountered an error processing your request. Please try again.',
+        content: errorMessage,
         isLoading: false
+      });
+      
+      // Show error toast
+      toast({
+        title: 'Processing Error',
+        description: 'There was an issue processing your request. Please try again.',
+        variant: 'destructive'
       });
     } finally {
       setIsLoading(false);
@@ -413,6 +438,18 @@ export const NexusAgentChat = forwardRef<any, NexusAgentChatProps>(({
       });
       return;
     }
+
+    // Validate Entity ID format (basic UUID validation)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(formData.metadata.entityId)) {
+      toast({
+        title: 'Invalid Entity ID',
+        description: 'Please enter a valid UUID format for the Entity ID',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     const request = formData as SFDRClassificationRequest;
 
     // Add form submission message
@@ -429,12 +466,15 @@ export const NexusAgentChat = forwardRef<any, NexusAgentChatProps>(({
       isLoading: true
     });
     setIsLoading(true);
+    
     try {
       const response = await callNexusAPI(request);
+      
       let responseContent = `**Validation Complete**\n\n`;
       responseContent += `**Classification:** ${response.classification?.recommendedArticle || 'N/A'}\n`;
       responseContent += `**Confidence:** ${((response.classification?.confidence || 0) * 100).toFixed(1)}%\n\n`;
       responseContent += `**Compliance Score:** ${response.complianceScore}%\n\n`;
+      
       if (response.issues && response.issues.length > 0) {
         responseContent += `**Issues Found:**\n`;
         response.issues.forEach(issue => {
@@ -442,29 +482,52 @@ export const NexusAgentChat = forwardRef<any, NexusAgentChatProps>(({
         });
         responseContent += '\n';
       }
+      
       if (response.recommendations && response.recommendations.length > 0) {
         responseContent += `**Recommendations:**\n`;
         response.recommendations.forEach(rec => {
           responseContent += `• ${rec}\n`;
         });
       }
+      
       updateMessage(loadingId, {
         content: responseContent,
         data: response,
         isLoading: false
       });
+      
+      // Show success toast with key information
+      const severity = response.issues?.some(i => i.severity === 'error') ? 'warning' : 'default';
       toast({
         title: 'Validation Complete',
-        description: `Classification: ${response.classification?.recommendedArticle || 'N/A'} (${((response.classification?.confidence || 0) * 100).toFixed(1)}% confidence)`
+        description: `Classification: ${response.classification?.recommendedArticle || 'N/A'} (${((response.classification?.confidence || 0) * 100).toFixed(1)}% confidence)`,
+        variant: severity === 'warning' ? 'destructive' : 'default'
       });
-    } catch (_error) {
+      
+      // Log successful validation
+      logger.info('SFDR validation completed successfully', {
+        fundName: request.fundProfile.fundName,
+        classification: response.classification?.recommendedArticle,
+        confidence: response.classification?.confidence,
+        complianceScore: response.complianceScore,
+        issuesCount: response.issues?.length || 0
+      });
+      
+    } catch (error) {
+      logger.error('SFDR validation failed:', error);
+      
+      const errorMessage = error instanceof Error 
+        ? `Validation failed: ${error.message}` 
+        : 'Error validating SFDR compliance. Please check your data and try again.';
+      
       updateMessage(loadingId, {
-        content: 'Error validating SFDR compliance. Please check your data and try again.',
+        content: errorMessage,
         isLoading: false
       });
+      
       toast({
         title: 'Validation Error',
-        description: 'Failed to validate SFDR compliance',
+        description: 'Failed to validate SFDR compliance. Please try again.',
         variant: 'destructive'
       });
     } finally {

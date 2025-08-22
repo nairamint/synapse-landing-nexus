@@ -10,13 +10,20 @@ schemas = ["public", "storage", "graphql_public"]
 port = 54322
 
 [studio]
+enabled = true
 port = 54323
 
 [inbucket]
+enabled = true
 port = 54324
 
 [storage]
-port = 54325
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
 
 [functions]
 [functions.send-invitation]
@@ -33,3 +40,9 @@ verify_jwt = true
 
 [functions.risk-assessment]
 verify_jwt = true
+
+[functions.env-validation]
+verify_jwt = false
+
+[functions.websocket-server]
+verify_jwt = false

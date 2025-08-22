@@ -28,6 +28,7 @@ import Map from './pages/Map';
 import UseCases from './pages/UseCases';
 import NexusAgent from './pages/NexusAgent';
 import SFDRGem from './pages/SFDRGem';
+import TestingPage from './pages/TestingPage';
 
 // Create and export the router
 export const router = createBrowserRouter([
@@ -181,6 +182,11 @@ export const router = createBrowserRouter([
   {
     path: '/navbar-test',
     element: <NavbarMenuTest />
+  },
+  // Testing and diagnostics routes
+  {
+    path: '/testing',
+    element: <TestingPage />
   },
   // SFDR Navigator routes - both routes point to the same component
   {
